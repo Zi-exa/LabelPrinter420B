@@ -1,0 +1,7 @@
+{
+  "version": "1.1.0",
+  "apkUrl": "https://github.com/Zi-exa/LabelPrinter420B/releases/download/v1.1.0/LabelPrinter420B-release-v1.1.0.apk",
+  "title": "Update tersedia",
+  "notes": "Auto-update dari aplikasi + cek pembaruan manual, fix hitam pekat + pilihan kualitas Draft/Normal/Tajam/Ultra, pilih halaman All/Range.",
+  "mandatory": false
+}

@@ -48,4 +48,13 @@
     <string name="print_failed">Proses cetak gagal.</string>
     <string name="busy">Mohon tunggu proses sebelumnya selesai.</string>
     <string name="accessibility_busy">Proses sedang berjalan</string>
+    <string name="update_available_title">Update tersedia</string>
+    <string name="update_available_msg">Versi %1$s tersedia (saat ini %2$s).\n\n%3$s</string>
+    <string name="update_btn_now">Update</string>
+    <string name="update_btn_later">Nanti</string>
+    <string name="update_check">Cek Pembaruan</string>
+    <string name="update_checking">Memeriksa pembaruan…</string>
+    <string name="update_none">Sudah versi terbaru (%1$s)</string>
+    <string name="update_error">Gagal cek pembaruan</string>
+    <string name="version_label">v%1$s</string>
 </resources>

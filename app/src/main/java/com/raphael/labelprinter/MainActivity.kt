@@ -44,6 +44,8 @@ class MainActivity : Activity() {
     private lateinit var rangeInputContainer: View
     private lateinit var pageRangeInput: EditText
     private lateinit var qualitySpinner: Spinner
+    private lateinit var versionLabel: TextView
+    private lateinit var checkUpdateLabel: TextView
 
     private lateinit var session: RetainedPrinterSession
     private val printerClient: BluetoothPrinterClient
@@ -128,6 +130,8 @@ class MainActivity : Activity() {
         rangeInputContainer = findViewById(R.id.rangeInputContainer)
         pageRangeInput = findViewById(R.id.pageRangeInput)
         qualitySpinner = findViewById(R.id.qualitySpinner)
+        versionLabel = findViewById(R.id.versionLabel)
+        checkUpdateLabel = findViewById(R.id.checkUpdateLabel)
 
         bluetoothAdapter =
             (getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
@@ -176,6 +180,9 @@ class MainActivity : Activity() {
         }
         updatePrintModeLabels()
 
+        versionLabel.text = getString(R.string.version_label, AppUpdateChecker.currentVersion(this))
+        checkUpdateLabel.setOnClickListener { checkForAppUpdate(manual = true) }
+
         session.attach(this)
         if (selectedPdf == null) restoreSelectedPdf() else renderPdfStatus()
         consumeIncomingPdf(intent)
@@ -183,6 +190,7 @@ class MainActivity : Activity() {
         setBusy(busy)
         resumePendingBluetoothOperation()
         if (!busy) maybeAutoConnect()
+        checkForAppUpdate(manual = false)
     }
 
     override fun onRetainNonConfigurationInstance(): Any = session
@@ -471,6 +479,55 @@ class MainActivity : Activity() {
         } catch (_: IllegalArgumentException) {
             null
         }
+    }
+
+    private fun checkForAppUpdate(manual: Boolean) {
+        val current = AppUpdateChecker.currentVersion(this)
+        if (manual) {
+            checkUpdateLabel.isEnabled = false
+            checkUpdateLabel.setText(R.string.update_checking)
+        }
+        AppUpdateChecker.checkAsync(
+            currentVersion = current,
+            onResult = { manifest ->
+                session.postUi { activity ->
+                    activity.checkUpdateLabel.isEnabled = true
+                    activity.checkUpdateLabel.setText(R.string.update_check)
+                    if (manifest != null) {
+                        activity.showUpdateDialog(manifest, current)
+                    } else if (manual) {
+                        Toast.makeText(activity, activity.getString(R.string.update_none, current), Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+            onError = { err ->
+                session.postUi { activity ->
+                    activity.checkUpdateLabel.isEnabled = true
+                    activity.checkUpdateLabel.setText(R.string.update_check)
+                    if (manual) {
+                        Toast.makeText(activity, "${activity.getString(R.string.update_error)}: ${err.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            },
+        )
+    }
+
+    private fun showUpdateDialog(manifest: UpdateManifest, currentVersion: String) {
+        val msg = getString(
+            R.string.update_available_msg,
+            manifest.version,
+            currentVersion,
+            manifest.notes ?: "-",
+        )
+        AlertDialog.Builder(this)
+            .setTitle(manifest.title ?: getString(R.string.update_available_title))
+            .setMessage(msg)
+            .setPositiveButton(R.string.update_btn_now) { _, _ ->
+                AppUpdateChecker.openUpdateUrl(this, manifest.apkUrl)
+            }
+            .setNegativeButton(R.string.update_btn_later, null)
+            .setCancelable(!manifest.mandatory)
+            .show()
     }
 
     private fun resolveDisplayName(uri: Uri): String {

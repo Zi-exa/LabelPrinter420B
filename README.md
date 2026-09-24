@@ -22,9 +22,22 @@ Printer yang berhasil terhubung disimpan. Pada penggunaan berikutnya aplikasi ak
 - Transport: Bluetooth Classic SPP/RFCOMM
 - PDF dirender utuh dan dipusatkan; isi tidak dipotong
 
+## Pembaruan aplikasi
+
+Aplikasi mengecek `update.json` di `https://raw.githubusercontent.com/Zi-exa/LabelPrinter420B/master/update.json` saat dibuka dan via **Cek Pembaruan** di bawah layar. Jika versi baru tersedia, dialog muncul — tekan **Update** untuk download APK dari Releases. Tidak perlu uninstall, cukup install di atas versi lama (tanda tangan harus sama).
+
 ## Privasi
 
-Aplikasi tidak memiliki izin internet, tidak memakai akun, tidak mengunggah PDF, dan tidak menyimpan isi dokumen. Yang disimpan hanya URI PDF terakhir serta nama/alamat Bluetooth printer terakhir.
+Aplikasi memakai internet hanya untuk cek pembaruan (`update.json` + download APK). Tidak memakai akun, tidak mengunggah PDF, dan tidak menyimpan isi dokumen. Yang disimpan hanya URI PDF terakhir, nama/alamat Bluetooth printer terakhir, serta pilihan halaman/kualitas.
+
+## Kualitas cetak
+
+- Draft-Hemat: tipis cepat (DENSITY 6, SPEED 4, threshold 140)
+- Normal: seimbang (8, 3, 160)
+- Tajam: pekat lambat (12, 2, 180)
+- Ultra Tajam: pekat + dithering Floyd-Steinberg
+
+Jika hasil masih hitam pekat, coba Draft.
 
 ## Build
 
