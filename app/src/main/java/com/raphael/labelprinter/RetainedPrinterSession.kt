@@ -26,6 +26,7 @@ internal class RetainedPrinterSession(context: Context) {
     var failedAutomaticAddress: String? = null
     var printModeIsAll: Boolean = true
     var pageRangeText: String = ""
+    var printQualityOrdinal: Int = PrintQuality.NORMAL.ordinal
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val uiHandoff = UiHandoff<MainActivity>()

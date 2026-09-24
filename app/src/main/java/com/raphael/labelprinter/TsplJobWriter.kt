@@ -31,10 +31,13 @@ object TsplJobWriter {
                 "BITMAP 0,0,$rowBytes,$pixelHeight,0,"
         output.write(header.toByteArray(Charsets.US_ASCII))
 
+        // TSPL spec: bit 0 = printed (black), 1 = white — invert from internal 1=black
+        val tsplBitmap = ByteArray(bitmap.size) { i -> (bitmap[i].toInt().inv() and 0xFF).toByte() }
+
         var offset = 0
-        while (offset < bitmap.size) {
-            val count = minOf(4_096, bitmap.size - offset)
-            output.write(bitmap, offset, count)
+        while (offset < tsplBitmap.size) {
+            val count = minOf(4_096, tsplBitmap.size - offset)
+            output.write(tsplBitmap, offset, count)
             offset += count
         }
 

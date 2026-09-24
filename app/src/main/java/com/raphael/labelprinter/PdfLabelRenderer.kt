@@ -22,6 +22,7 @@ object PdfLabelRenderer {
         output: OutputStream,
         copies: Int = 1,
         selectedPages: List<Int>? = null,
+        quality: PrintQuality = PrintQuality.NORMAL,
         onPage: (page: Int, total: Int) -> Unit,
     ): Int = openRenderer(context, uri) { renderer ->
         val total = renderer.pageCount
@@ -45,7 +46,7 @@ object PdfLabelRenderer {
             }
             val index = pageNumber - 1
             renderer.openPage(index).use { page ->
-                val bitmapData = renderMonochrome(page)
+                val bitmapData = renderMonochrome(page, quality)
                 printed++
                 onPage(printed, pagesToPrint.size)
                 TsplJobWriter.write(
@@ -54,13 +55,15 @@ object PdfLabelRenderer {
                     pixelWidth = LABEL_WIDTH_DOTS,
                     pixelHeight = LABEL_HEIGHT_DOTS,
                     copies = copies,
+                    density = quality.density,
+                    speed = quality.speed,
                 )
             }
         }
         printed
     }
 
-    private fun renderMonochrome(page: PdfRenderer.Page): ByteArray {
+    private fun renderMonochrome(page: PdfRenderer.Page, quality: PrintQuality = PrintQuality.NORMAL): ByteArray {
         val bitmap = Bitmap.createBitmap(
             LABEL_WIDTH_DOTS,
             LABEL_HEIGHT_DOTS,
@@ -92,11 +95,21 @@ object PdfLabelRenderer {
                 LABEL_WIDTH_DOTS,
                 LABEL_HEIGHT_DOTS,
             )
-            MonochromeEncoder.encode(
-                argbPixels = pixels,
-                width = LABEL_WIDTH_DOTS,
-                height = LABEL_HEIGHT_DOTS,
-            )
+            if (quality.useDithering) {
+                MonochromeEncoder.encodeWithDithering(
+                    argbPixels = pixels,
+                    width = LABEL_WIDTH_DOTS,
+                    height = LABEL_HEIGHT_DOTS,
+                    threshold = quality.threshold,
+                )
+            } else {
+                MonochromeEncoder.encode(
+                    argbPixels = pixels,
+                    width = LABEL_WIDTH_DOTS,
+                    height = LABEL_HEIGHT_DOTS,
+                    threshold = quality.threshold,
+                )
+            }
         } finally {
             bitmap.recycle()
         }

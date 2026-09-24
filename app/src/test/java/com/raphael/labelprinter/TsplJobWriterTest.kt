@@ -30,7 +30,8 @@ class TsplJobWriterTest {
                         "BITMAP 0,0,1,1,0,"
                 ).toByteArray(Charsets.US_ASCII).toList(),
             )
-            add(0xa1.toByte())
+            // TSPL BITMAP is inverted: internal 1=black -> TSPL 0=black (ones-complement)
+            add(0x5e.toByte())
             addAll("\r\nPRINT 2,1\r\n".toByteArray(Charsets.US_ASCII).toList())
         }.toByteArray()
 

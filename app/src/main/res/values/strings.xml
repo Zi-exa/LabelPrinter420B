@@ -20,6 +20,13 @@
     <string name="page_range_label">Halaman:</string>
     <string name="page_range_invalid">Rentang halaman tidak valid. Contoh: 1-3, 5</string>
     <string name="page_range_empty">Masukkan rentang atau pilih Semua halaman</string>
+    <string name="quality_label">KUALITAS CETAK</string>
+    <string name="quality_draft">Draft - Hemat (tipis, cepat)</string>
+    <string name="quality_normal">Normal (seimbang)</string>
+    <string name="quality_sharp">Tajam (pekat, lambat)</string>
+    <string name="quality_ultra">Ultra Tajam (dithering, pekat)</string>
+    <string name="quality_debug_invert_fix">Fix hitam aktif (TSPL invert)</string>
+    <string name="quality_hint">Pekat mengatur DENSITY, Tajam lebih hitam — coba Normal dulu, jika hitam naikkan ke Draft</string>
     <string name="status_ready">Siap digunakan</string>
     <string name="status_scanning">Mencari XP-420B…</string>
     <string name="status_pairing">Pairing %1$s… masukkan PIN 0000 jika diminta</string>

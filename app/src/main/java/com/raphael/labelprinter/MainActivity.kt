@@ -19,11 +19,14 @@ import android.provider.OpenableColumns
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.RadioButton
 import android.widget.RadioGroup
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 
@@ -40,6 +43,7 @@ class MainActivity : Activity() {
     private lateinit var radioRange: RadioButton
     private lateinit var rangeInputContainer: View
     private lateinit var pageRangeInput: EditText
+    private lateinit var qualitySpinner: Spinner
 
     private lateinit var session: RetainedPrinterSession
     private val printerClient: BluetoothPrinterClient
@@ -123,6 +127,7 @@ class MainActivity : Activity() {
         radioRange = findViewById(R.id.radioRange)
         rangeInputContainer = findViewById(R.id.rangeInputContainer)
         pageRangeInput = findViewById(R.id.pageRangeInput)
+        qualitySpinner = findViewById(R.id.qualitySpinner)
 
         bluetoothAdapter =
             (getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
@@ -157,6 +162,19 @@ class MainActivity : Activity() {
         pageRangeInput.setText(session.pageRangeText)
         if (session.printModeIsAll) radioAll.isChecked = true else radioRange.isChecked = true
         updatePrintModeUI()
+
+        val qualityNames = PrintQuality.entries.map { it.displayName }
+        qualitySpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, qualityNames).also {
+            it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        qualitySpinner.setSelection(session.printQualityOrdinal.coerceIn(0, qualityNames.lastIndex))
+        qualitySpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                session.printQualityOrdinal = position
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+        updatePrintModeLabels()
 
         session.attach(this)
         if (selectedPdf == null) restoreSelectedPdf() else renderPdfStatus()
@@ -636,12 +654,14 @@ class MainActivity : Activity() {
             }
             return
         }
+        val quality = PrintQuality.fromOrdinal(session.printQualityOrdinal)
         try {
             val total = PdfLabelRenderer.printAll(
                 context = applicationContext,
                 uri = uri,
                 output = printerClient.outputStream(),
                 selectedPages = selectedPages,
+                quality = quality,
             ) { page, pageTotal ->
                 session.postUi { activity ->
                     activity.activityStatus.text =
@@ -703,6 +723,7 @@ class MainActivity : Activity() {
         radioAll.isEnabled = !value
         radioRange.isEnabled = !value
         pageRangeInput.isEnabled = !value
+        qualitySpinner.isEnabled = !value
         if (!value) updatePrintModeUI()
     }
 
