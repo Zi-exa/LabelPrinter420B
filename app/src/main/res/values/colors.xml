@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#14532D</color>
+
+    <color name="surface">#F4F7F5</color>
+    <color name="card">#FFFFFF</color>
+    <color name="text_primary">#142019</color>
+    <color name="text_secondary">#58645D</color>
+    <color name="status_ready">#1F7A43</color>
+    <color name="status_idle">#9A6700</color>
+    <color name="divider">#D9E1DC</color>
+</resources>
