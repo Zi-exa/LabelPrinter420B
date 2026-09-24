@@ -21,17 +21,33 @@ object PdfLabelRenderer {
         uri: Uri,
         output: OutputStream,
         copies: Int = 1,
+        selectedPages: List<Int>? = null,
         onPage: (page: Int, total: Int) -> Unit,
     ): Int = openRenderer(context, uri) { renderer ->
         val total = renderer.pageCount
         require(total > 0) { "PDF tidak memiliki halaman" }
-        for (index in 0 until total) {
+        val pagesToPrint: List<Int> = if (selectedPages == null) {
+            (1..total).toList()
+        } else {
+            require(selectedPages.isNotEmpty()) { "Tidak ada halaman dipilih" }
+            selectedPages.forEach {
+                require(it in 1..total) { "Halaman $it di luar rentang 1..$total" }
+            }
+            // de-duplicate preserving order
+            val seen = linkedSetOf<Int>()
+            selectedPages.filter { seen.add(it) }
+        }
+        require(pagesToPrint.isNotEmpty()) { "Tidak ada halaman dipilih" }
+        var printed = 0
+        for (pageNumber in pagesToPrint) {
             if (Thread.currentThread().isInterrupted) {
                 throw InterruptedException("Print dibatalkan")
             }
+            val index = pageNumber - 1
             renderer.openPage(index).use { page ->
                 val bitmapData = renderMonochrome(page)
-                onPage(index + 1, total)
+                printed++
+                onPage(printed, pagesToPrint.size)
                 TsplJobWriter.write(
                     output = output,
                     bitmap = bitmapData,
@@ -41,7 +57,7 @@ object PdfLabelRenderer {
                 )
             }
         }
-        total
+        printed
     }
 
     private fun renderMonochrome(page: PdfRenderer.Page): ByteArray {

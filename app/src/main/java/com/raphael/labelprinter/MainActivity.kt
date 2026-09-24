@@ -16,9 +16,14 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
 import android.widget.Button
+import android.widget.EditText
 import android.widget.ProgressBar
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
 
@@ -30,6 +35,11 @@ class MainActivity : Activity() {
     private lateinit var connectButton: Button
     private lateinit var printButton: Button
     private lateinit var progressBar: ProgressBar
+    private lateinit var printModeGroup: RadioGroup
+    private lateinit var radioAll: RadioButton
+    private lateinit var radioRange: RadioButton
+    private lateinit var rangeInputContainer: View
+    private lateinit var pageRangeInput: EditText
 
     private lateinit var session: RetainedPrinterSession
     private val printerClient: BluetoothPrinterClient
@@ -108,6 +118,11 @@ class MainActivity : Activity() {
         connectButton = findViewById(R.id.connectButton)
         printButton = findViewById(R.id.printButton)
         progressBar = findViewById(R.id.progressBar)
+        printModeGroup = findViewById(R.id.printModeGroup)
+        radioAll = findViewById(R.id.radioAll)
+        radioRange = findViewById(R.id.radioRange)
+        rangeInputContainer = findViewById(R.id.rangeInputContainer)
+        pageRangeInput = findViewById(R.id.pageRangeInput)
 
         bluetoothAdapter =
             (getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
@@ -121,9 +136,27 @@ class MainActivity : Activity() {
                 session.printContinuation.waitForPdf()
                 choosePdf()
             } else {
+                val validation = validatePageRange()
+                if (validation == null) return@setOnClickListener
                 requestConnection(printAfter = true)
             }
         }
+
+        printModeGroup.setOnCheckedChangeListener { _, checkedId ->
+            session.printModeIsAll = checkedId == R.id.radioAll
+            updatePrintModeUI()
+        }
+        pageRangeInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                session.pageRangeText = s?.toString().orEmpty()
+                updatePrintModeUI()
+            }
+        })
+        pageRangeInput.setText(session.pageRangeText)
+        if (session.printModeIsAll) radioAll.isChecked = true else radioRange.isChecked = true
+        updatePrintModeUI()
 
         session.attach(this)
         if (selectedPdf == null) restoreSelectedPdf() else renderPdfStatus()
@@ -361,6 +394,65 @@ class MainActivity : Activity() {
         } else {
             pdfStatus.setText(R.string.no_pdf)
         }
+        updatePrintModeLabels()
+        updatePrintModeUI()
+    }
+
+    private fun updatePrintModeLabels() {
+        val total = session.pdfPageCount
+        if (total != null && total > 0) {
+            radioAll.text = getString(R.string.print_mode_all, total)
+            radioAll.isEnabled = true
+            radioRange.isEnabled = true
+            pageRangeInput.isEnabled = true
+        } else {
+            radioAll.text = getString(R.string.print_mode_all, 0)
+            // keep enabled so user sees options even before pdf, but hint
+        }
+    }
+
+    private fun updatePrintModeUI() {
+        val isAll = session.printModeIsAll
+        rangeInputContainer.visibility = if (isAll) View.GONE else View.VISIBLE
+        // update print button text to reflect mode
+        val total = session.pdfPageCount
+        printButton.text = if (isAll) {
+            getString(R.string.print_all)
+        } else {
+            val raw = session.pageRangeText.trim()
+            if (raw.isEmpty()) getString(R.string.print_all) else getString(R.string.print_all) + " ($raw)"
+        }
+        // keep button enabled unless busy
+        if (!busy) printButton.isEnabled = true
+    }
+
+    private fun validatePageRange(): List<Int>? {
+        val total = session.pdfPageCount
+        if (selectedPdf == null || total == null) return emptyList()
+        if (session.printModeIsAll) return (1..total).toList()
+        val input = session.pageRangeText
+        if (input.isBlank()) {
+            showFailure(R.string.page_range_empty)
+            Toast.makeText(this, R.string.page_range_empty, Toast.LENGTH_LONG).show()
+            return null
+        }
+        return try {
+            PageRangeParser.parse(input, total)
+        } catch (e: IllegalArgumentException) {
+            activityStatus.text = getString(R.string.status_error, e.message ?: getString(R.string.page_range_invalid))
+            Toast.makeText(this, e.message ?: getString(R.string.page_range_invalid), Toast.LENGTH_LONG).show()
+            null
+        }
+    }
+
+    private fun resolveSelectedPages(): List<Int>? {
+        val total = session.pdfPageCount ?: return null
+        return if (session.printModeIsAll) null
+        else try {
+            PageRangeParser.parse(session.pageRangeText, total)
+        } catch (_: IllegalArgumentException) {
+            null
+        }
     }
 
     private fun resolveDisplayName(uri: Uri): String {
@@ -536,11 +628,20 @@ class MainActivity : Activity() {
             }
             return
         }
+        val selectedPages = resolveSelectedPages()
+        // validate again on bg thread (catch invalid range after rotation etc.)
+        if (!session.printModeIsAll && selectedPages == null) {
+            session.postUi { activity ->
+                activity.showFailure(R.string.page_range_invalid)
+            }
+            return
+        }
         try {
             val total = PdfLabelRenderer.printAll(
                 context = applicationContext,
                 uri = uri,
                 output = printerClient.outputStream(),
+                selectedPages = selectedPages,
             ) { page, pageTotal ->
                 session.postUi { activity ->
                     activity.activityStatus.text =
@@ -598,6 +699,11 @@ class MainActivity : Activity() {
         selectPdfButton.isEnabled = !value
         connectButton.isEnabled = !value
         printButton.isEnabled = !value
+        printModeGroup.isEnabled = !value
+        radioAll.isEnabled = !value
+        radioRange.isEnabled = !value
+        pageRangeInput.isEnabled = !value
+        if (!value) updatePrintModeUI()
     }
 
     private fun maybeAutoConnect() {
